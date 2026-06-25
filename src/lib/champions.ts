@@ -5,7 +5,7 @@ import type { Champion } from '@/types/wildrift'
 
 const LS_KEY = 'wr_champions_cache'
 // Bump version when fallback list changes so old caches are discarded
-const LS_VERSION = 2
+const LS_VERSION = 3
 const LS_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 // ─────────────────────────────────────────────────────────────────────────────
