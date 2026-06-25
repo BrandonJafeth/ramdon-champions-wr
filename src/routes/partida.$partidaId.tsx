@@ -179,9 +179,15 @@ function PartidaScreen() {
   function handleAsignar(jugadorId: string, rol?: string) {
     clearError(jugadorId)
     setPendingJugadorId(jugadorId)
-    // Auto-assign a random free line when player picks "Cualquier rol"
-    const lineasLibres = WR_LINEAS.filter((l) => !rolesOcupados.has(l))
-    const rolEfectivo = rol ?? lineasLibres[Math.floor(Math.random() * lineasLibres.length)]
+    // When "Cualquier rol" is chosen, pick from free lanes; if all lanes are
+    // taken (e.g. extra players), pass undefined so any champion is eligible.
+    let rolEfectivo: string | undefined = rol
+    if (!rolEfectivo) {
+      const lineasLibres = WR_LINEAS.filter((l) => !rolesOcupados.has(l))
+      rolEfectivo = lineasLibres.length > 0
+        ? lineasLibres[Math.floor(Math.random() * lineasLibres.length)]
+        : undefined
+    }
     asignarMutation.mutate(
       { jugadorId, rol: rolEfectivo },
       {

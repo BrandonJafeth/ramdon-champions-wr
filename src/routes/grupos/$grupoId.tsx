@@ -31,12 +31,24 @@ export const Route = createFileRoute('/grupos/$grupoId')({
 // Jugadores section
 // ──────────────────────────────────────────────────────────
 
-function AgregarJugadorDialog({ grupoId }: { grupoId: string }) {
+const MAX_JUGADORES = 5
+
+function AgregarJugadorDialog({
+  grupoId,
+  lleno,
+  jugadoresActuales,
+}: {
+  grupoId: string
+  lleno: boolean
+  jugadoresActuales: number
+}) {
   const [open, setOpen] = useState(false)
   const [nombre, setNombre] = useState('')
   const [modo, setModo] = useState<'uno' | 'lote'>('uno')
   const agregar = useAgregarJugador(grupoId)
   const agregarLote = useAgregarJugadores(grupoId)
+
+  const slotsLibres = MAX_JUGADORES - jugadoresActuales
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -48,12 +60,24 @@ function AgregarJugadorDialog({ grupoId }: { grupoId: string }) {
         .split('\n')
         .map((n) => n.trim())
         .filter(Boolean)
+
+      // Client-side guard: trim to available slots and warn if needed
+      if (nombres.length > slotsLibres) {
+        const recortados = nombres.slice(0, slotsLibres)
+        agregarLote.mutate(recortados, {
+          onSuccess: () => { setNombre(''); setOpen(false) },
+        })
+        return
+      }
+
       agregarLote.mutate(nombres, {
         onSuccess: () => { setNombre(''); setOpen(false) },
+        onError: () => { /* keep dialog open so error is visible */ },
       })
     } else {
       agregar.mutate(trimmed, {
         onSuccess: () => { setNombre(''); setOpen(false) },
+        onError: () => { /* keep dialog open so error is visible */ },
       })
     }
   }
@@ -61,9 +85,26 @@ function AgregarJugadorDialog({ grupoId }: { grupoId: string }) {
   const isPending = agregar.isPending || agregarLote.isPending
   const error = agregar.error ?? agregarLote.error
 
+  // Count names typed in lote mode
+  const nombresEscritos = nombre
+    .split('\n')
+    .map((n) => n.trim())
+    .filter(Boolean).length
+
+  const loteExcede = modo === 'lote' && nombresEscritos > slotsLibres
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm" variant="outline" />}>
+      <DialogTrigger
+        render={
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={lleno}
+            title={lleno ? `Máximo ${MAX_JUGADORES} jugadores` : undefined}
+          />
+        }
+      >
         <UserPlus className="mr-1.5 h-4 w-4" />
         Agregar
       </DialogTrigger>
@@ -96,16 +137,24 @@ function AgregarJugadorDialog({ grupoId }: { grupoId: string }) {
               autoFocus
             />
           ) : (
-            <textarea
-              className="min-h-25 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder={'Un nombre por línea:\nJuan\nPedro\nMaría'}
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              autoFocus
-            />
+            <>
+              <textarea
+                className="min-h-25 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder={`Un nombre por línea (quedan ${slotsLibres} lugar${slotsLibres !== 1 ? 'es' : ''}):\nJuan\nPedro\nMaría`}
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                autoFocus
+              />
+              {loteExcede && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Solo quedan {slotsLibres} lugar{slotsLibres !== 1 ? 'es' : ''}.
+                  Se agregarán los primeros {slotsLibres}.
+                </p>
+              )}
+            </>
           )}
           {error && <p className="text-xs text-destructive">{error.message}</p>}
-          <Button type="submit" disabled={isPending || !nombre.trim()}>
+          <Button type="submit" disabled={isPending || !nombre.trim() || slotsLibres === 0}>
             {isPending ? 'Agregando...' : 'Agregar'}
           </Button>
         </form>
@@ -246,8 +295,9 @@ function NocheRow({ noche, temporadaId, pendingNocheId, onNuevaPartida, showSepa
 function GrupoDetalle() {
   const { grupoId } = Route.useParams()
   const navigate = useNavigate()
-  const { champions } = useWildRiftChampions()
-  const totalCampeones = champions.length
+  const { champions, loading: championsLoading } = useWildRiftChampions()
+  // Use 139 as fallback while champions load — avoids progress bar showing 0
+  const totalCampeones = champions.length > 0 ? champions.length : 139
 
   const gruposQuery = useGrupos()
   const grupoNombre = gruposQuery.data?.find((g) => g.id === grupoId)?.nombre ?? ''
@@ -307,11 +357,15 @@ function GrupoDetalle() {
               Jugadores
               {jugadores.length > 0 && (
                 <Badge variant="secondary" className="text-xs">
-                  {jugadores.length}
+                  {jugadores.length}/{MAX_JUGADORES}
                 </Badge>
               )}
             </CardTitle>
-            <AgregarJugadorDialog grupoId={grupoId} />
+            <AgregarJugadorDialog
+              grupoId={grupoId}
+              lleno={jugadores.length >= MAX_JUGADORES}
+              jugadoresActuales={jugadores.length}
+            />
           </div>
         </CardHeader>
         <CardContent className="pt-0">
@@ -389,7 +443,7 @@ function GrupoDetalle() {
                   Sin partidas jugadas todavía.
                 </p>
               )}
-              {progresoQuery.data && progresoQuery.data.length > 0 && (
+              {progresoQuery.data && progresoQuery.data.length > 0 && !championsLoading && (
                 <div className="mb-3">
                   <ProgresoGrupo
                     progreso={progresoQuery.data}
