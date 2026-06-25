@@ -5,8 +5,23 @@ import type { Champion } from '@/types/wildrift'
 
 const LS_KEY = 'wr_champions_cache'
 // Bump version when fallback list changes so old caches are discarded
-const LS_VERSION = 4
+const LS_VERSION = 5
 const LS_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Normalize scraped champion IDs to match fallback IDs.
+// ─────────────────────────────────────────────────────────────────────────────
+function normalizeChampionId(id: string): string {
+  const mapping: Record<string, string> = {
+    'ksante': 'k-sante',
+    'kaisa': 'kai-sa',
+    'khazix': 'kha-zix',
+    'kogmaw': 'kog-maw',
+    'nunu-and-willump': 'nunu-willump',
+    'velkoz': 'vel-koz',
+  }
+  return mapping[id.toLowerCase()] || id
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LANE MAP — source of truth for filtering.
@@ -426,7 +441,11 @@ async function loadChampions(): Promise<Champion[]> {
       })
     )
     // Cast is safe: API type is a structural superset of our Champion interface
-    apiChampions = results.filter((c): c is NonNullable<typeof c> => c !== null) as unknown as Champion[]
+    const rawApiList = results.filter((c): c is NonNullable<typeof c> => c !== null)
+    apiChampions = rawApiList.map((c) => ({
+      ...c,
+      id: normalizeChampionId(c.id),
+    })) as unknown as Champion[]
   } catch (err) {
     console.warn('Error al cargar campeones desde la API, usando fallback completo:', (err as Error).message)
   }
