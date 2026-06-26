@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, CheckCircle2, Clock, BarChart2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Clock, BarChart2, Pencil, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
 import { useJugadores } from '@/hooks/useJugadores'
@@ -21,7 +19,7 @@ export const Route = createFileRoute('/stats/$partidaId')({
 })
 
 // ──────────────────────────────────────────────────────────
-// Stepper (mobile-friendly +/- control)
+// Stepper
 // ──────────────────────────────────────────────────────────
 
 function Stepper({
@@ -34,21 +32,21 @@ function Stepper({
   label: string
 }) {
   return (
-    <div className="flex flex-col items-center gap-1 flex-1">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
+      <span className="text-[11px] font-medium text-muted-foreground tracking-wide truncate w-full text-center">{label}</span>
+      <div className="flex items-center gap-1">
         <button
           type="button"
-          className="h-8 w-8 rounded-full border border-border text-base leading-none hover:bg-muted disabled:opacity-40"
+          className="h-8 w-8 rounded-full border border-border bg-muted text-sm leading-none hover:bg-accent active:scale-95 transition-all disabled:opacity-30 shrink-0"
           onClick={() => onChange(Math.max(0, value - 1))}
           disabled={value === 0}
         >
           −
         </button>
-        <span className="w-7 text-center text-sm font-semibold tabular-nums">{value}</span>
+        <span className="w-7 text-center text-sm font-mono font-bold tabular-nums shrink-0">{value}</span>
         <button
           type="button"
-          className="h-8 w-8 rounded-full border border-border text-base leading-none hover:bg-muted"
+          className="h-8 w-8 rounded-full border border-border bg-muted text-sm leading-none hover:bg-accent active:scale-95 transition-all shrink-0"
           onClick={() => onChange(Math.min(99, value + 1))}
         >
           +
@@ -69,52 +67,88 @@ interface JugadorStatsCardProps {
 }
 
 function JugadorStatsCard({ jugador, stats, partidaId }: JugadorStatsCardProps) {
-  const [kills, setKills] = useState(0)
-  const [deaths, setDeaths] = useState(0)
-  const [assists, setAssists] = useState(0)
-  const [resultado, setResultado] = useState<'gano' | 'perdio'>('gano')
+  const [isEditing, setIsEditing] = useState(false)
+  const [kills, setKills] = useState(stats?.kills ?? 0)
+  const [deaths, setDeaths] = useState(stats?.deaths ?? 0)
+  const [assists, setAssists] = useState(stats?.assists ?? 0)
+  const [resultado, setResultado] = useState<'gano' | 'perdio'>(stats?.resultado ?? 'gano')
   const guardar = useGuardarStats(partidaId)
 
-  if (stats) {
-    return (
-      <Card>
-        <CardContent className="pt-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold">{jugador.nombre}</p>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-mono text-muted-foreground">
-              {stats.kills}/{stats.deaths}/{stats.assists}
-            </span>
-            <Badge
-              className={`text-xs text-white ${
-                stats.resultado === 'gano'
-                  ? 'bg-green-600 hover:bg-green-600'
-                  : 'bg-red-600 hover:bg-red-600'
-              }`}
-            >
-              {stats.resultado === 'gano' ? 'Ganó' : 'Perdió'}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-    )
+  function enterEdit() {
+    setKills(stats?.kills ?? 0)
+    setDeaths(stats?.deaths ?? 0)
+    setAssists(stats?.assists ?? 0)
+    setResultado(stats?.resultado ?? 'gano')
+    setIsEditing(true)
   }
 
   function handleGuardar() {
-    guardar.mutate({ jugadorId: jugador.id, kills, deaths, assists, resultado })
+    guardar.mutate(
+      { jugadorId: jugador.id, kills, deaths, assists, resultado },
+      { onSuccess: () => setIsEditing(false) }
+    )
   }
 
+  // Saved, read-only view
+  if (stats && !isEditing) {
+    return (
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+            <span className="font-semibold text-sm truncate">{jugador.nombre}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-mono text-sm font-medium">
+              <span className="text-emerald-400">{stats.kills}</span>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-red-400">{stats.deaths}</span>
+              <span className="text-muted-foreground">/</span>
+              <span className="text-blue-400">{stats.assists}</span>
+            </span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              stats.resultado === 'gano'
+                ? 'bg-emerald-500/15 text-emerald-400'
+                : 'bg-red-500/15 text-red-400'
+            }`}>
+              {stats.resultado === 'gano' ? 'Victoria' : 'Derrota'}
+            </span>
+            <button
+              type="button"
+              onClick={enterEdit}
+              className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+              title="Editar stats"
+            >
+              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Edit / new entry form
   return (
-    <Card>
-      <CardContent className="pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold">{jugador.nombre}</p>
-          <Clock className="h-4 w-4 text-muted-foreground" />
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="px-4 pt-4 pb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <p className="font-semibold text-sm">{jugador.nombre}</p>
+          </div>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+              title="Cancelar"
+            >
+              <X className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
         </div>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-0.5 mb-4">
           <Stepper value={kills} onChange={setKills} label="Kills" />
           <Stepper value={deaths} onChange={setDeaths} label="Deaths" />
           <Stepper value={assists} onChange={setAssists} label="Assists" />
@@ -123,25 +157,25 @@ function JugadorStatsCard({ jugador, stats, partidaId }: JugadorStatsCardProps) 
         <div className="flex gap-2 mb-3">
           <button
             type="button"
-            className={`flex-1 rounded-md py-1.5 text-sm font-medium border transition-colors ${
+            className={`flex-1 rounded-lg py-2 text-sm font-semibold border transition-all active:scale-95 ${
               resultado === 'gano'
-                ? 'bg-green-600 text-white border-green-600'
-                : 'bg-transparent text-muted-foreground border-border hover:border-green-500'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'bg-transparent text-muted-foreground border-border hover:border-emerald-500/40 hover:text-emerald-400'
             }`}
             onClick={() => setResultado('gano')}
           >
-            Ganó
+            Victoria
           </button>
           <button
             type="button"
-            className={`flex-1 rounded-md py-1.5 text-sm font-medium border transition-colors ${
+            className={`flex-1 rounded-lg py-2 text-sm font-semibold border transition-all active:scale-95 ${
               resultado === 'perdio'
-                ? 'bg-destructive text-destructive-foreground border-destructive'
-                : 'bg-transparent text-muted-foreground border-border hover:border-destructive'
+                ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                : 'bg-transparent text-muted-foreground border-border hover:border-red-500/40 hover:text-red-400'
             }`}
             onClick={() => setResultado('perdio')}
           >
-            Perdió
+            Derrota
           </button>
         </div>
 
@@ -151,14 +185,14 @@ function JugadorStatsCard({ jugador, stats, partidaId }: JugadorStatsCardProps) 
 
         <Button
           size="sm"
-          className="w-full"
+          className="w-full h-10"
           disabled={guardar.isPending}
           onClick={handleGuardar}
         >
-          {guardar.isPending ? 'Guardando...' : 'Guardar stats'}
+          {guardar.isPending ? 'Guardando...' : isEditing ? 'Actualizar stats' : 'Guardar stats'}
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -195,59 +229,65 @@ function StatsScreen() {
   }
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6 pb-32">
-      <div className="mb-6 flex items-center gap-3">
-        <Link
-          to="/partida/$partidaId"
-          params={{ partidaId }}
-          search={{ grupoId, temporadaId, numero }}
-        >
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">Stats Partida #{numero}</h1>
+    <main className="min-h-screen bg-background">
+      <div className="mx-auto w-full max-w-2xl px-4 pt-10 pb-32">
+        {/* Header */}
+        <div className="mb-5 flex items-center gap-3">
+          <Link
+            to="/partida/$partidaId"
+            params={{ partidaId }}
+            search={{ grupoId, temporadaId, numero }}
+          >
+            <button
+              type="button"
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-display text-2xl font-bold truncate">Stats Partida #{numero}</h1>
+          </div>
+          <span className="text-sm font-mono font-semibold text-muted-foreground shrink-0 tabular-nums">
+            {submitidos}/{total}
+          </span>
         </div>
-        <span className="text-sm text-muted-foreground tabular-nums">
-          {submitidos}/{total}
-        </span>
+
+        {/* Progress bar */}
+        {total > 0 && (
+          <div className="mb-5 h-1 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${Math.round((submitidos / total) * 100)}%` }}
+            />
+          </div>
+        )}
+
+        {isLoading && <LoadingState message="Cargando stats..." />}
+        {pageError && <ErrorState message={pageError.message} />}
+
+        {!isLoading && !pageError && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {jugadores.map((jugador) => {
+              const jugadorStats = stats.find((s) => s.jugador_id === jugador.id) as
+                | StatsConJugador
+                | undefined
+              return (
+                <JugadorStatsCard
+                  key={jugador.id}
+                  jugador={jugador}
+                  stats={jugadorStats}
+                  partidaId={partidaId}
+                />
+              )
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Progress bar */}
-      {total > 0 && (
-        <div className="mb-4 h-1.5 w-full rounded-full bg-secondary overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${Math.round((submitidos / total) * 100)}%` }}
-          />
-        </div>
-      )}
-
-      {isLoading && <LoadingState message="Cargando stats..." />}
-      {pageError && <ErrorState message={pageError.message} />}
-
-      {!isLoading && !pageError && (
-        <div className="flex flex-col gap-3">
-          {jugadores.map((jugador) => {
-            const jugadorStats = stats.find((s) => s.jugador_id === jugador.id) as
-              | StatsConJugador
-              | undefined
-            return (
-              <JugadorStatsCard
-                key={jugador.id}
-                jugador={jugador}
-                stats={jugadorStats}
-                partidaId={partidaId}
-              />
-            )
-          })}
-        </div>
-      )}
-
-      {/* Cerrar partida — fixed at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background px-4 py-3">
-        <div className="mx-auto max-w-md">
+      {/* Cerrar partida — fijo abajo */}
+      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-sm px-4 py-3">
+        <div className="mx-auto w-full max-w-2xl">
           {!todosLisios && total > 0 && (
             <p className="mb-2 text-center text-xs text-muted-foreground">
               Esperando a {total - submitidos} jugador{total - submitidos !== 1 ? 'es' : ''}…
@@ -259,11 +299,11 @@ function StatsScreen() {
             </p>
           )}
           <Button
-            className="w-full"
+            className="w-full h-12 text-base gap-2"
             disabled={!todosLisios || finalizarMutation.isPending}
             onClick={handleCerrar}
           >
-            <BarChart2 className="mr-1.5 h-4 w-4" />
+            <BarChart2 className="h-5 w-5" />
             {finalizarMutation.isPending ? 'Cerrando...' : 'Cerrar partida'}
           </Button>
         </div>

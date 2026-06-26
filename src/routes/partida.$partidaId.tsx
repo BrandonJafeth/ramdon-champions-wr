@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Shuffle, Ban, BarChart2 } from 'lucide-react'
+import { ArrowLeft, Shuffle, Ban, BarChart2, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
@@ -54,90 +53,108 @@ function JugadorCard({
     ? champions.find((c) => c.id === asignacion.champion_id)
     : null
 
-  return (
-    <Card>
-      <CardContent className="pt-4">
-        <p className="text-sm font-semibold mb-3">{jugador.nombre}</p>
-
-        {!asignacion ? (
-          <>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              <button
-                type="button"
-                className={`rounded-full px-2.5 py-0.5 text-xs border transition-colors ${
-                  !rol
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-transparent text-muted-foreground border-border hover:border-foreground'
-                }`}
-                onClick={() => setRol(undefined)}
-              >
-                Cualquier rol
-              </button>
-              {WR_LINEAS.map((r) => {
-                const ocupado = rolesOcupados.has(r)
-                const activo = rol === r
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    disabled={ocupado}
-                    className={`rounded-full px-2.5 py-0.5 text-xs border transition-colors ${
-                      ocupado
-                        ? 'opacity-35 cursor-not-allowed border-border text-muted-foreground line-through'
-                        : activo
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-transparent text-muted-foreground border-border hover:border-foreground'
-                    }`}
-                    onClick={() => !ocupado && setRol((prev) => (prev === r ? undefined : r))}
-                  >
-                    {r}
-                  </button>
-                )
-              })}
+  if (asignacion) {
+    return (
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        {/* Champion hero image strip */}
+        {champion?.image_url && (
+          <div className="relative h-28 overflow-hidden">
+            <img
+              src={champion.image_url}
+              alt={asignacion.champion_name}
+              className="w-full h-full object-cover object-top"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 px-4 pb-2 flex items-end justify-between">
+              <div>
+                <p className="font-display font-bold text-base leading-tight">
+                  {asignacion.champion_name}
+                </p>
+                {asignacion.rol_pedido && (
+                  <span className="text-xs text-muted-foreground">{asignacion.rol_pedido}</span>
+                )}
+              </div>
             </div>
-            <Button
-              size="sm"
-              className="w-full"
-              disabled={isPending || champions.length === 0}
-              onClick={() => onAsignar(jugador.id, rol)}
-            >
-              <Shuffle className="mr-1.5 h-3.5 w-3.5" />
-              {isPending ? 'Asignando...' : champions.length === 0 ? 'Cargando campeones...' : 'Asignar campeón random'}
-            </Button>
-          </>
-        ) : (
-          <div className="flex items-center gap-3">
-            {champion?.image_url && (
-              <img
-                src={champion.image_url}
-                alt={asignacion.champion_name}
-                className="h-14 w-14 rounded-md object-cover shrink-0"
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{asignacion.champion_name}</p>
-              {asignacion.rol_pedido && (
-                <Badge variant="secondary" className="mt-0.5 text-xs">
-                  {asignacion.rol_pedido}
-                </Badge>
-              )}
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="shrink-0"
-              disabled={isPending}
-              onClick={() => onReroll(asignacion.id, jugador.id)}
-            >
-              <Ban className="mr-1 h-3.5 w-3.5" />
-              {isPending ? 'Re-tirando...' : 'Banear'}
-            </Button>
           </div>
         )}
 
-        {error && <p className="mt-2 text-xs text-destructive">{error}</p>}
-      </CardContent>
-    </Card>
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold text-muted-foreground">{jugador.nombre}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 px-3 text-xs gap-1.5 shrink-0"
+            disabled={isPending}
+            onClick={() => onReroll(asignacion.id, jugador.id)}
+          >
+            <Ban className="h-3 w-3" />
+            {isPending ? '...' : 'Banear'}
+          </Button>
+        </div>
+
+        {error && <p className="px-4 pb-3 text-xs text-destructive">{error}</p>}
+      </div>
+    )
+  }
+
+  // Unassigned state
+  return (
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="px-4 pt-4 pb-3">
+        <p className="font-display font-semibold text-base mb-3">{jugador.nombre}</p>
+
+        {/* Role pills */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          <button
+            type="button"
+            className={`h-7 px-3 rounded-full text-xs font-medium border transition-colors ${
+              !rol
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-transparent text-muted-foreground border-border hover:border-foreground hover:text-foreground'
+            }`}
+            onClick={() => setRol(undefined)}
+          >
+            Cualquier
+          </button>
+          {WR_LINEAS.map((r) => {
+            const ocupado = rolesOcupados.has(r)
+            const activo = rol === r
+            return (
+              <button
+                key={r}
+                type="button"
+                disabled={ocupado}
+                className={`h-7 px-3 rounded-full text-xs font-medium border transition-colors ${
+                  ocupado
+                    ? 'opacity-30 cursor-not-allowed border-border text-muted-foreground line-through'
+                    : activo
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-transparent text-muted-foreground border-border hover:border-foreground hover:text-foreground'
+                }`}
+                onClick={() => !ocupado && setRol((prev) => (prev === r ? undefined : r))}
+              >
+                {r}
+              </button>
+            )
+          })}
+        </div>
+
+        <Button
+          className="w-full h-10 gap-2"
+          disabled={isPending || champions.length === 0}
+          onClick={() => onAsignar(jugador.id, rol)}
+        >
+          <Shuffle className="h-4 w-4" />
+          {isPending
+            ? 'Asignando...'
+            : champions.length === 0
+              ? 'Cargando campeones...'
+              : 'Asignar random'}
+        </Button>
+      </div>
+
+      {error && <p className="px-4 pb-3 text-xs text-destructive">{error}</p>}
+    </div>
   )
 }
 
@@ -179,8 +196,6 @@ function PartidaScreen() {
   function handleAsignar(jugadorId: string, rol?: string) {
     clearError(jugadorId)
     setPendingJugadorId(jugadorId)
-    // When "Cualquier rol" is chosen, pick from free lanes; if all lanes are
-    // taken (e.g. extra players), pass undefined so any champion is eligible.
     let rolEfectivo: string | undefined = rol
     if (!rolEfectivo) {
       const lineasLibres = WR_LINEAS.filter((l) => !rolesOcupados.has(l))
@@ -217,69 +232,92 @@ function PartidaScreen() {
 
   const isLoading = jugadoresQuery.isLoading || asignacionesQuery.isLoading
   const pageError = jugadoresQuery.error ?? asignacionesQuery.error
+  const asignadosCount = asignaciones.length
+  const totalCount = jugadores.length
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6 pb-24">
-      <div className="mb-6 flex items-center gap-3">
-        <Link to="/grupos/$grupoId" params={{ grupoId }}>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <h1 className="text-xl font-bold">Partida #{numero}</h1>
+    <main className="min-h-screen bg-background">
+      <div className="mx-auto max-w-md px-4 pt-10 pb-28">
+        {/* Header */}
+        <div className="mb-6 flex items-center gap-3">
+          <Link to="/grupos/$grupoId" params={{ grupoId }}>
+            <button
+              type="button"
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-display text-2xl font-bold">Partida #{numero}</h1>
+          </div>
+          {totalCount > 0 && (
+            <span className="text-sm font-mono text-muted-foreground shrink-0 tabular-nums">
+              {asignadosCount}/{totalCount}
+            </span>
+          )}
+        </div>
+
+        {championsLoading && (
+          <p className="mb-4 text-center text-xs text-muted-foreground">
+            Cargando campeones...
+          </p>
+        )}
+        {championsError && (
+          <p className="mb-4 text-center text-xs text-destructive">
+            Error al cargar campeones: {championsError}
+          </p>
+        )}
+
+        {isLoading && <LoadingState message="Cargando partida..." />}
+        {pageError && <ErrorState message={pageError.message} />}
+
+        {!isLoading && !pageError && (
+          <div className="flex flex-col gap-3">
+            {jugadores.map((jugador) => {
+              const asignacion = asignaciones.find((a) => a.jugador_id === jugador.id) as
+                | AsignacionConJugador
+                | undefined
+              return (
+                <JugadorCard
+                  key={jugador.id}
+                  jugador={jugador}
+                  asignacion={asignacion}
+                  champions={champions}
+                  rolesOcupados={rolesOcupados}
+                  isPending={pendingJugadorId === jugador.id}
+                  error={errors.get(jugador.id)}
+                  onAsignar={handleAsignar}
+                  onReroll={handleReroll}
+                />
+              )
+            })}
+
+            {jugadores.length === 0 && (
+              <div className="py-16 text-center">
+                <p className="text-sm text-muted-foreground">Sin jugadores en este grupo.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {isLoading && <LoadingState message="Cargando partida..." />}
-      {pageError && <ErrorState message={pageError.message} />}
-      {championsLoading && (
-        <p className="mb-4 text-center text-xs text-muted-foreground">
-          Cargando campeones...
-        </p>
-      )}
-      {championsError && (
-        <p className="mb-4 text-center text-xs text-destructive">
-          Error cargando campeones: {championsError}
-        </p>
-      )}
-
-      {!isLoading && !pageError && (
-        <div className="flex flex-col gap-3">
-          {jugadores.map((jugador) => {
-            const asignacion = asignaciones.find((a) => a.jugador_id === jugador.id) as
-              | AsignacionConJugador
-              | undefined
-            return (
-              <JugadorCard
-                key={jugador.id}
-                jugador={jugador}
-                asignacion={asignacion}
-                champions={champions}
-                rolesOcupados={rolesOcupados}
-                isPending={pendingJugadorId === jugador.id}
-                error={errors.get(jugador.id)}
-                onAsignar={handleAsignar}
-                onReroll={handleReroll}
-              />
-            )
-          })}
-          {jugadores.length === 0 && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Sin jugadores en este grupo.
-            </p>
-          )}
-
-          {jugadores.length > 0 && (
+      {/* CTA fijo — ir a stats */}
+      {jugadores.length > 0 && !isLoading && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-sm px-4 py-3">
+          <div className="mx-auto max-w-md">
             <Link
               to="/stats/$partidaId"
               params={{ partidaId }}
               search={{ grupoId, temporadaId, numero }}
             >
-              <Button variant="outline" className="w-full mt-2">
-                <BarChart2 className="mr-1.5 h-4 w-4" />
+              <Button className="w-full h-12 text-base gap-2">
+                <BarChart2 className="h-5 w-5" />
                 Registrar estadísticas
+                <ChevronRight className="h-4 w-4 ml-auto" />
               </Button>
             </Link>
-          )}
+          </div>
         </div>
       )}
     </main>

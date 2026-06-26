@@ -1,9 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Trophy } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { ArrowLeft, Trophy, Sword } from 'lucide-react'
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
 import { useRankingTemporada, useRankingHistorico } from '@/hooks/useRanking'
@@ -18,66 +15,85 @@ export const Route = createFileRoute('/ranking/$grupoId')({
 })
 
 // ──────────────────────────────────────────────────────────
-// Medal helper
+// Medal
 // ──────────────────────────────────────────────────────────
 
 function Medal({ pos }: { pos: number }) {
-  if (pos === 1) return <span className="text-base">🥇</span>
-  if (pos === 2) return <span className="text-base">🥈</span>
-  if (pos === 3) return <span className="text-base">🥉</span>
-  return <span className="text-xs text-muted-foreground tabular-nums">{pos}</span>
+  if (pos === 1) return <span className="text-lg leading-none">🥇</span>
+  if (pos === 2) return <span className="text-lg leading-none">🥈</span>
+  if (pos === 3) return <span className="text-lg leading-none">🥉</span>
+  return (
+    <span className="font-mono text-xs text-muted-foreground tabular-nums w-6 text-center">
+      {pos}
+    </span>
+  )
 }
 
 // ──────────────────────────────────────────────────────────
-// Temporada ranking table (full stats)
+// Temporada table
 // ──────────────────────────────────────────────────────────
 
 function TablaTemporada({ rows }: { rows: RankingRow[] }) {
   if (rows.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        Sin partidas jugadas esta temporada.
-      </p>
+      <div className="py-16 text-center">
+        <Sword className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-40" />
+        <p className="text-sm text-muted-foreground">Sin partidas jugadas esta temporada.</p>
+      </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
       {rows.map((row, i) => {
         const kda = row.kda.toFixed(2)
         const pos = i + 1
+        const isFirst = pos === 1
+
         return (
-          <Card key={row.jugador_id} className={pos === 1 ? 'border-amber-300 dark:border-amber-600' : ''}>
-            <CardContent className="py-3 px-4">
-              <div className="flex items-center gap-3">
-                <div className="w-7 flex justify-center shrink-0">
-                  <Medal pos={pos} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{row.jugador_nombre}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {row.total_kills}/{row.total_deaths}/{row.total_assists}
-                    <span className="mx-1.5 opacity-40">·</span>
-                    {row.partidas_jugadas} partida{row.partidas_jugadas !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold tabular-nums">{kda}</p>
-                  <p className="text-xs text-muted-foreground">KDA</p>
-                </div>
-                <div className="shrink-0 flex gap-1">
-                  <Badge className="text-xs bg-green-600 text-white hover:bg-green-600">
-                    {row.victorias}V
-                  </Badge>
-                  {row.derrotas > 0 && (
-                    <Badge className="text-xs bg-red-600 text-white hover:bg-red-600">
-                      {row.derrotas}D
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div
+            key={row.jugador_id}
+            className={`flex items-center gap-3 px-4 py-3.5 ${
+              i < rows.length - 1 ? 'border-b border-border' : ''
+            } ${isFirst ? 'bg-primary/5' : ''}`}
+          >
+            <div className="w-7 flex items-center justify-center shrink-0">
+              <Medal pos={pos} />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <p className={`font-semibold truncate ${isFirst ? 'text-base' : 'text-sm'}`}>
+                {row.jugador_nombre}
+              </p>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                <span className="text-emerald-400">{row.total_kills}</span>
+                <span className="opacity-40">/</span>
+                <span className="text-red-400">{row.total_deaths}</span>
+                <span className="opacity-40">/</span>
+                <span className="text-blue-400">{row.total_assists}</span>
+                <span className="text-muted-foreground opacity-60 mx-1.5">·</span>
+                {row.partidas_jugadas}p
+              </p>
+            </div>
+
+            <div className="shrink-0 text-right mr-2">
+              <p className={`font-mono font-bold tabular-nums ${isFirst ? 'text-base text-primary' : 'text-sm'}`}>
+                {kda}
+              </p>
+              <p className="text-xs text-muted-foreground">KDA</p>
+            </div>
+
+            <div className="shrink-0 flex flex-col gap-1 items-end">
+              <span className="text-xs px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-mono font-medium">
+                {row.victorias}V
+              </span>
+              {row.derrotas > 0 && (
+                <span className="text-xs px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-400 font-mono font-medium">
+                  {row.derrotas}D
+                </span>
+              )}
+            </div>
+          </div>
         )
       })}
     </div>
@@ -85,45 +101,52 @@ function TablaTemporada({ rows }: { rows: RankingRow[] }) {
 }
 
 // ──────────────────────────────────────────────────────────
-// Histórico ranking table (view: victorias + kda only)
+// Histórico table
 // ──────────────────────────────────────────────────────────
 
 function TablaHistorico({ rows }: { rows: RankingViewRow[] }) {
   if (rows.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        Sin datos históricos todavía.
-      </p>
+      <div className="py-16 text-center">
+        <Trophy className="mx-auto mb-3 h-8 w-8 text-muted-foreground opacity-40" />
+        <p className="text-sm text-muted-foreground">Sin datos históricos todavía.</p>
+      </div>
     )
   }
 
-  // Sort by victorias desc, kda desc
   const sorted = [...rows].sort((a, b) => b.victorias - a.victorias || b.kda - a.kda)
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="bg-card border border-border rounded-xl overflow-hidden">
       {sorted.map((row, i) => {
         const pos = i + 1
+        const isFirst = pos === 1
         const nombre = String((row as Record<string, unknown>).jugador_nombre ?? row.jugador_id)
         const kda = typeof row.kda === 'number' ? row.kda.toFixed(2) : '—'
+
         return (
-          <Card key={row.jugador_id} className={pos === 1 ? 'border-amber-300 dark:border-amber-600' : ''}>
-            <CardContent className="py-3 px-4">
-              <div className="flex items-center gap-3">
-                <div className="w-7 flex justify-center shrink-0">
-                  <Medal pos={pos} />
-                </div>
-                <p className="flex-1 text-sm font-semibold truncate">{nombre}</p>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-bold tabular-nums">{kda}</p>
-                  <p className="text-xs text-muted-foreground">KDA</p>
-                </div>
-                <Badge className="shrink-0 text-xs bg-green-600 text-white hover:bg-green-600">
-                  {row.victorias}V
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
+          <div
+            key={row.jugador_id}
+            className={`flex items-center gap-3 px-4 py-3.5 ${
+              i < sorted.length - 1 ? 'border-b border-border' : ''
+            } ${isFirst ? 'bg-primary/5' : ''}`}
+          >
+            <div className="w-7 flex items-center justify-center shrink-0">
+              <Medal pos={pos} />
+            </div>
+            <p className={`flex-1 font-semibold truncate ${isFirst ? 'text-base' : 'text-sm'}`}>
+              {nombre}
+            </p>
+            <div className="shrink-0 text-right mr-2">
+              <p className={`font-mono font-bold tabular-nums ${isFirst ? 'text-base text-primary' : 'text-sm'}`}>
+                {kda}
+              </p>
+              <p className="text-xs text-muted-foreground">KDA</p>
+            </div>
+            <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 font-mono font-medium">
+              {row.victorias}V
+            </span>
+          </div>
         )
       })}
     </div>
@@ -147,66 +170,74 @@ function RankingScreen() {
   const activeQuery = tab === 'temporada' ? temporadaQuery : historicoQuery
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6 pb-16">
-      {/* Header */}
-      <div className="mb-5 flex items-center gap-3">
-        <Link to="/grupos/$grupoId" params={{ grupoId }}>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Trophy className="h-4 w-4 shrink-0 text-amber-500" />
-          <h1 className="text-xl font-bold truncate">
-            Ranking{grupoNombre ? ` · ${grupoNombre}` : ''}
-          </h1>
+    <main className="min-h-screen bg-background">
+      <div className="mx-auto max-w-md px-4 pt-10 pb-12">
+        {/* Header */}
+        <div className="mb-7 flex items-center gap-3">
+          <Link to="/grupos/$grupoId" params={{ grupoId }}>
+            <button
+              type="button"
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-card border border-border text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          </Link>
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Trophy className="h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0">
+              {grupoNombre && (
+                <p className="text-xs text-muted-foreground truncate">{grupoNombre}</p>
+              )}
+              <h1 className="font-display text-2xl font-bold leading-tight">Ranking</h1>
+            </div>
+          </div>
         </div>
+
+        {/* Tab switcher */}
+        <div className="mb-5 flex rounded-xl border border-border p-1 bg-card gap-1">
+          <button
+            type="button"
+            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${
+              tab === 'temporada'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setTab('temporada')}
+          >
+            Temporada
+          </button>
+          <button
+            type="button"
+            className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${
+              tab === 'historico'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+            onClick={() => setTab('historico')}
+          >
+            Histórico
+          </button>
+        </div>
+
+        {activeQuery.isLoading && <LoadingState message="Cargando ranking..." />}
+        {activeQuery.error && <ErrorState message={activeQuery.error.message} />}
+
+        {!activeQuery.isLoading && !activeQuery.error && (
+          <>
+            {tab === 'temporada' && !temporadaId && (
+              <div className="py-16 text-center">
+                <p className="text-sm text-muted-foreground">Sin temporada activa.</p>
+              </div>
+            )}
+            {tab === 'temporada' && temporadaId && (
+              <TablaTemporada rows={(temporadaQuery.data ?? []) as RankingRow[]} />
+            )}
+            {tab === 'historico' && (
+              <TablaHistorico rows={(historicoQuery.data ?? []) as RankingViewRow[]} />
+            )}
+          </>
+        )}
       </div>
-
-      {/* Toggle tabs */}
-      <div className="mb-4 flex rounded-lg border border-border p-0.5 bg-muted">
-        <button
-          type="button"
-          className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
-            tab === 'temporada'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setTab('temporada')}
-        >
-          Temporada
-        </button>
-        <button
-          type="button"
-          className={`flex-1 rounded-md py-1.5 text-sm font-medium transition-colors ${
-            tab === 'historico'
-              ? 'bg-background text-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-          onClick={() => setTab('historico')}
-        >
-          Histórico
-        </button>
-      </div>
-
-      {activeQuery.isLoading && <LoadingState message="Cargando ranking..." />}
-      {activeQuery.error && <ErrorState message={activeQuery.error.message} />}
-
-      {!activeQuery.isLoading && !activeQuery.error && (
-        <>
-          {tab === 'temporada' && !temporadaId && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Sin temporada activa.
-            </p>
-          )}
-          {tab === 'temporada' && temporadaId && (
-            <TablaTemporada rows={(temporadaQuery.data ?? []) as RankingRow[]} />
-          )}
-          {tab === 'historico' && (
-            <TablaHistorico rows={(historicoQuery.data ?? []) as RankingViewRow[]} />
-          )}
-        </>
-      )}
     </main>
   )
 }
