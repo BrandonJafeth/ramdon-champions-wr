@@ -10,6 +10,7 @@ import { useAsignacionesRealtime } from '@/hooks/useRealtime'
 import { useWildRiftChampions } from '@/lib/champions'
 import type { AsignacionConJugador, Jugador } from '@/types/wildrift'
 
+
 const WR_LINEAS = ['Barón', 'Jungla', 'Mid', 'Dragón', 'Soporte'] as const
 
 export const Route = createFileRoute('/partida/$partidaId')({
@@ -31,6 +32,7 @@ interface JugadorCardProps {
   champions: ReturnType<typeof useWildRiftChampions>['champions']
   rolesOcupados: Set<string>
   isPending: boolean
+  pendingAny: boolean
   error?: string
   onAsignar: (jugadorId: string, rol?: string) => void
   onReroll: (asignacionId: string, jugadorId: string) => void
@@ -42,6 +44,7 @@ function JugadorCard({
   champions,
   rolesOcupados,
   isPending,
+  pendingAny,
   error,
   onAsignar,
   onReroll,
@@ -140,7 +143,7 @@ function JugadorCard({
 
         <Button
           className="w-full h-10 gap-2"
-          disabled={isPending || champions.length === 0}
+          disabled={isPending || pendingAny || champions.length === 0}
           onClick={() => onAsignar(jugador.id, rol)}
         >
           <Shuffle className="h-4 w-4" />
@@ -183,6 +186,7 @@ function PartidaScreen() {
 
   const [pendingJugadorId, setPendingJugadorId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Map<string, string>>(new Map())
+  const pendingAny = pendingJugadorId !== null
 
   function clearError(jugadorId: string) {
     setErrors((prev) => {
@@ -195,15 +199,11 @@ function PartidaScreen() {
   function handleAsignar(jugadorId: string, rol?: string) {
     clearError(jugadorId)
     setPendingJugadorId(jugadorId)
-    let rolEfectivo: string | undefined = rol
-    if (!rolEfectivo) {
-      const lineasLibres = WR_LINEAS.filter((l) => !rolesOcupados.has(l))
-      rolEfectivo = lineasLibres.length > 0
-        ? lineasLibres[Math.floor(Math.random() * lineasLibres.length)]
-        : undefined
-    }
+    // Role selection (when rol is undefined) happens inside the mutation
+    // using fresh DB data — avoids race conditions when multiple players
+    // click simultaneously and see the same stale React state.
     asignarMutation.mutate(
-      { jugadorId, rol: rolEfectivo },
+      { jugadorId, rol },
       {
         onSuccess: () => setPendingJugadorId(null),
         onError: (err) => {
@@ -285,6 +285,7 @@ function PartidaScreen() {
                   champions={champions}
                   rolesOcupados={rolesOcupados}
                   isPending={pendingJugadorId === jugador.id}
+                  pendingAny={pendingAny}
                   error={errors.get(jugador.id)}
                   onAsignar={handleAsignar}
                   onReroll={handleReroll}

@@ -115,6 +115,42 @@ export async function rerollPorBaneo({
 }
 
 
+export async function obtenerRolesJugadosEnTemporada(
+  temporadaId: string,
+  jugadorId: string
+): Promise<string[]> {
+  const { data: noches, error: errNoches } = await supabase
+    .from('wr_noches')
+    .select('id')
+    .eq('temporada_id', temporadaId)
+  if (errNoches) throw new Error(`Error buscando noches: ${errNoches.message}`)
+
+  const nocheIds = (noches ?? []).map((n: { id: string }) => n.id)
+  if (nocheIds.length === 0) return []
+
+  const { data: partidas, error: errPartidas } = await supabase
+    .from('wr_partidas')
+    .select('id')
+    .in('noche_id', nocheIds)
+  if (errPartidas) throw new Error(`Error buscando partidas: ${errPartidas.message}`)
+
+  const partidaIds = (partidas ?? []).map((p: { id: string }) => p.id)
+  if (partidaIds.length === 0) return []
+
+  const { data, error } = await supabase
+    .from('wr_asignaciones_campeon')
+    .select('rol_pedido')
+    .eq('jugador_id', jugadorId)
+    .neq('estado', 'baneado')
+    .in('partida_id', partidaIds)
+    .not('rol_pedido', 'is', null)
+  if (error) throw new Error(`Error buscando roles históricos: ${error.message}`)
+
+  return (data ?? [])
+    .map((row: { rol_pedido: string | null }) => row.rol_pedido)
+    .filter((r): r is string => Boolean(r))
+}
+
 export async function listarAsignacionesDePartida(
   partidaId: string
 ): Promise<AsignacionConJugador[]> {
