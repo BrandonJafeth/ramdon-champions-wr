@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   ArrowLeft, UserPlus, UserMinus, Swords, Trophy,
-  CalendarPlus, Play, BarChart2, MoonStar, RotateCcw, ChevronRight,
+  CalendarPlus, Play, BarChart2, MoonStar, RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
 import { useGrupos } from '@/hooks/useGrupos'

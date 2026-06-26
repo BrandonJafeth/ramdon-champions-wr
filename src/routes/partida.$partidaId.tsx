@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Shuffle, Ban, BarChart2, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
 import { useJugadores } from '@/hooks/useJugadores'
@@ -64,7 +63,7 @@ function JugadorCard({
               alt={asignacion.champion_name}
               className="w-full h-full object-cover object-top"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-card via-card/40 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-2 flex items-end justify-between">
               <div>
                 <p className="font-display font-bold text-base leading-tight">
