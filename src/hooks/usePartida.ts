@@ -60,8 +60,12 @@ export function useAsignarCampeon(partidaId: string, temporadaId: string) {
         }
       }
 
-      const champion = getRandomChampion(rolEfectivo, yaJugados)
-      if (!champion) throw new Error('No quedan campeones disponibles (se agotaron en esta temporada).')
+      // Try preferred lane first; if that lane is exhausted, fall back to any lane
+      const champion =
+        getRandomChampion(rolEfectivo, yaJugados) ??
+        (rolEfectivo ? getRandomChampion(undefined, yaJugados) : null)
+
+      if (!champion) throw new Error('No quedan campeones disponibles en esta temporada.')
       return guardarAsignacion(partidaId, jugadorId, champion, rolEfectivo)
     },
     onSuccess: () => {
