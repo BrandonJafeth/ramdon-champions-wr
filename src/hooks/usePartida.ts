@@ -51,7 +51,8 @@ export function useAsignarCampeon(partidaId: string, temporadaId: string) {
           // Prefer the least-played ones to avoid repeating the same role.
           const conteo = new Map(lineasLibres.map((l) => [l, 0]))
           for (const r of rolesHistoricos) {
-            if (conteo.has(r)) conteo.set(r, conteo.get(r)! + 1)
+            const linea = r as typeof WR_LINEAS[number]
+            if (conteo.has(linea)) conteo.set(linea, conteo.get(linea)! + 1)
           }
           const minJugadas = Math.min(...conteo.values())
           const candidatas = lineasLibres.filter((l) => conteo.get(l) === minJugadas)
