@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Shuffle, Ban, BarChart2, ChevronRight } from 'lucide-react'
+import { sileo } from 'sileo'
 import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
@@ -205,10 +206,14 @@ function PartidaScreen() {
     asignarMutation.mutate(
       { jugadorId, rol },
       {
-        onSuccess: () => setPendingJugadorId(null),
+        onSuccess: () => {
+          setPendingJugadorId(null)
+          sileo.success({ title: 'Campeón asignado' })
+        },
         onError: (err) => {
           setPendingJugadorId(null)
           setErrors((prev) => new Map(prev).set(jugadorId, err.message))
+          sileo.error({ title: err.message })
         },
       }
     )
@@ -220,10 +225,14 @@ function PartidaScreen() {
     rerollMutation.mutate(
       { asignacionAnteriorId: asignacionId },
       {
-        onSuccess: () => setPendingJugadorId(null),
+        onSuccess: () => {
+          setPendingJugadorId(null)
+          sileo.success({ title: 'Baneado — nuevo campeón asignado' })
+        },
         onError: (err) => {
           setPendingJugadorId(null)
           setErrors((prev) => new Map(prev).set(jugadorId, err.message))
+          sileo.error({ title: err.message })
         },
       }
     )

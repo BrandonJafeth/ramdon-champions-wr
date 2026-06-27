@@ -4,6 +4,7 @@ import {
   ArrowLeft, UserPlus, UserMinus, Swords, Trophy,
   CalendarPlus, Play, BarChart2, MoonStar, RotateCcw,
 } from 'lucide-react'
+import { sileo } from 'sileo'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -113,11 +114,19 @@ function AgregarJugadorDialog({
       const nombres = trimmed.split('\n').map((n) => n.trim()).filter(Boolean)
       const recortados = nombres.slice(0, slotsLibres)
       agregarLote.mutate(recortados, {
-        onSuccess: () => { setNombre(''); setOpen(false) },
+        onSuccess: () => {
+          sileo.success({ title: `${recortados.length} jugadores agregados` })
+          setNombre(''); setOpen(false)
+        },
+        onError: (err) => sileo.error({ title: err.message }),
       })
     } else {
       agregar.mutate(trimmed, {
-        onSuccess: () => { setNombre(''); setOpen(false) },
+        onSuccess: () => {
+          sileo.success({ title: `${trimmed} agregado` })
+          setNombre(''); setOpen(false)
+        },
+        onError: (err) => sileo.error({ title: err.message }),
       })
     }
   }
@@ -207,7 +216,10 @@ function JugadorRow({ jugador, grupoId }: { jugador: Jugador; grupoId: string })
         type="button"
         className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
         disabled={eliminar.isPending}
-        onClick={() => eliminar.mutate(jugador.id)}
+        onClick={() => eliminar.mutate(jugador.id, {
+          onSuccess: () => sileo.success({ title: `${jugador.nombre} eliminado` }),
+          onError: (err) => sileo.error({ title: err.message }),
+        })}
         aria-label={`Eliminar ${jugador.nombre}`}
       >
         <UserMinus className="h-3.5 w-3.5" />
@@ -301,7 +313,15 @@ function NocheRow({ noche, temporadaId, pendingNocheId, onNuevaPartida, isLast }
           className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
           disabled={cerrar.isPending || reabrir.isPending}
           onClick={() =>
-            noche.estado === 'abierta' ? cerrar.mutate(noche.id) : reabrir.mutate(noche.id)
+            noche.estado === 'abierta'
+              ? cerrar.mutate(noche.id, {
+                  onSuccess: () => sileo.success({ title: 'Noche cerrada' }),
+                  onError: (err) => sileo.error({ title: err.message }),
+                })
+              : reabrir.mutate(noche.id, {
+                  onSuccess: () => sileo.success({ title: 'Noche reabierta' }),
+                  onError: (err) => sileo.error({ title: err.message }),
+                })
           }
           title={noche.estado === 'abierta' ? 'Cerrar noche' : 'Reabrir noche'}
         >
@@ -455,7 +475,10 @@ function GrupoDetalle() {
               <Button
                 size="sm"
                 disabled={crearTemporada.isPending}
-                onClick={() => crearTemporada.mutate(undefined)}
+                onClick={() => crearTemporada.mutate(undefined, {
+                  onSuccess: () => sileo.success({ title: 'Temporada iniciada' }),
+                  onError: (err) => sileo.error({ title: err.message }),
+                })}
                 className="h-10 px-5"
               >
                 {crearTemporada.isPending ? 'Creando...' : 'Iniciar temporada'}
@@ -509,7 +532,10 @@ function GrupoDetalle() {
                   variant="ghost"
                   className="h-8 px-3 text-xs gap-1.5"
                   disabled={crearNocheMutation.isPending || nocheHoyExiste}
-                  onClick={() => crearNocheMutation.mutate(undefined)}
+                  onClick={() => crearNocheMutation.mutate(undefined, {
+                    onSuccess: () => sileo.success({ title: 'Noche creada' }),
+                    onError: (err) => sileo.error({ title: err.message }),
+                  })}
                 >
                   <CalendarPlus className="h-3.5 w-3.5" />
                   {crearNocheMutation.isPending ? '...' : 'Nueva'}

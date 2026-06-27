@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { ArrowLeft, CheckCircle2, Clock, BarChart2, Pencil, X } from 'lucide-react'
+import { sileo } from 'sileo'
 import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/LoadingState'
 import { ErrorState } from '@/components/ErrorState'
@@ -85,7 +86,13 @@ function JugadorStatsCard({ jugador, stats, partidaId }: JugadorStatsCardProps) 
   function handleGuardar() {
     guardar.mutate(
       { jugadorId: jugador.id, kills, deaths, assists, resultado },
-      { onSuccess: () => setIsEditing(false) }
+      {
+        onSuccess: () => {
+          sileo.success({ title: 'Stats guardadas' })
+          setIsEditing(false)
+        },
+        onError: (err) => sileo.error({ title: err.message }),
+      }
     )
   }
 
@@ -223,8 +230,10 @@ function StatsScreen() {
   function handleCerrar() {
     finalizarMutation.mutate(undefined, {
       onSuccess: () => {
+        sileo.success({ title: 'Partida cerrada' })
         void navigate({ to: '/grupos/$grupoId', params: { grupoId } })
       },
+      onError: (err) => sileo.error({ title: err.message }),
     })
   }
 
