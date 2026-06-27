@@ -29,6 +29,8 @@ export function useAsignarCampeon(partidaId: string, temporadaId: string) {
 
   return useMutation({
     mutationFn: async ({ jugadorId, rol }: { jugadorId: string; rol?: string }) => {
+      if (!temporadaId) throw new Error('temporadaId inválido. Recarga la página.')
+
       // Fetch fresh DB state in parallel to avoid stale-React-state race conditions
       const [yaJugados, asignacionesActuales, rolesHistoricos] = await Promise.all([
         obtenerCampeonesUsadosEnTemporada(temporadaId),
@@ -60,10 +62,20 @@ export function useAsignarCampeon(partidaId: string, temporadaId: string) {
         }
       }
 
+      // Also exclude champions already committed in THIS partida.
+      // yaJugados covers the whole season (includes this partida after commit),
+      // but asignacionesActuales catches same-partida assignments fetched in the
+      // same tick — reduces the multi-device race window.
+      const activosEnPartida = asignacionesActuales
+        .filter((a) => a.estado !== 'baneado')
+        .map((a) => a.champion_id)
+        .filter(Boolean) as string[]
+      const excluir = [...new Set([...yaJugados, ...activosEnPartida])]
+
       // Try preferred lane first; if that lane is exhausted, fall back to any lane
       const champion =
-        getRandomChampion(rolEfectivo, yaJugados) ??
-        (rolEfectivo ? getRandomChampion(undefined, yaJugados) : null)
+        getRandomChampion(rolEfectivo, excluir) ??
+        (rolEfectivo ? getRandomChampion(undefined, excluir) : null)
 
       if (!champion) throw new Error('No quedan campeones disponibles en esta temporada.')
       return guardarAsignacion(partidaId, jugadorId, champion, rolEfectivo)

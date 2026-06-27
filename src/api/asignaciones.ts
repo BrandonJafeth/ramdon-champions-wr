@@ -56,6 +56,9 @@ export async function guardarAsignacion(
 
   if (error) {
     if (error.code === '23505') {
+      if (error.message.includes('champion_id')) {
+        throw new Error('Ese campeón ya fue asignado en esta partida. Intenta de nuevo.')
+      }
       throw new Error('Este jugador ya tiene un campeón asignado en esta partida.')
     }
     throw new Error(`Error guardando asignación: ${error.message}`)
@@ -74,20 +77,29 @@ export async function rerollPorBaneo({
   temporadaId,
   getRandomChampion,
 }: RerollParams): Promise<AsignacionCampeon> {
-  // Read current row to get champion and lane
+  // Read current row to get champion, lane, and partida
   const { data: anterior, error: errAnterior } = await supabase
     .from('wr_asignaciones_campeon')
-    .select('champion_id, rol_pedido')
+    .select('champion_id, rol_pedido, partida_id')
     .eq('id', asignacionAnteriorId)
     .single()
   if (errAnterior) throw new Error(`Error leyendo asignación: ${errAnterior.message}`)
 
-  const { champion_id: anteriorChampionId, rol_pedido: rolPedido } =
-    anterior as { champion_id: string; rol_pedido: string | null }
+  const { champion_id: anteriorChampionId, rol_pedido: rolPedido, partida_id: partidaId } =
+    anterior as { champion_id: string; rol_pedido: string | null; partida_id: string }
 
-  const yaJugados = await obtenerCampeonesUsadosEnTemporada(temporadaId)
-  // Exclude all used champions + the one being banned
-  const excluir = [...new Set([...yaJugados, anteriorChampionId])]
+  const [yaJugados, asignacionesActuales] = await Promise.all([
+    obtenerCampeonesUsadosEnTemporada(temporadaId),
+    listarAsignacionesDePartida(partidaId),
+  ])
+
+  const activosEnPartida = asignacionesActuales
+    .filter((a) => a.estado !== 'baneado' && a.id !== asignacionAnteriorId)
+    .map((a) => a.champion_id)
+    .filter(Boolean) as string[]
+
+  // Exclude season-used + current-partida active + the banned champion itself
+  const excluir = [...new Set([...yaJugados, ...activosEnPartida, anteriorChampionId])]
 
   // Try same lane first, fall back to any lane if exhausted
   const nuevoChampion =

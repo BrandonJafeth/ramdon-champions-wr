@@ -86,7 +86,7 @@ function JugadorCard({
             size="sm"
             variant="outline"
             className="h-8 px-3 text-xs gap-1.5 shrink-0"
-            disabled={isPending}
+            disabled={isPending || pendingAny}
             onClick={() => onReroll(asignacion.id, jugador.id)}
           >
             <Ban className="h-3 w-3" />
