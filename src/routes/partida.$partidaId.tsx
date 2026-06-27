@@ -115,8 +115,8 @@ function JugadorCard({
               <span className="text-xs font-medium text-violet-400">Baneos sugeridos</span>
             </div>
             <div className="flex flex-col gap-1">
-              {banSuggestions.map((s) => (
-                <div key={s.champion} className="flex items-start gap-2">
+              {banSuggestions.map((s, i) => (
+                <div key={i} className="flex items-start gap-2">
                   <span className="text-xs font-semibold text-foreground shrink-0 w-24 truncate">{s.champion}</span>
                   <span className="text-xs text-muted-foreground leading-tight">{s.reason}</span>
                 </div>

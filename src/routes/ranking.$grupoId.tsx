@@ -46,7 +46,7 @@ function TablaTemporada({ rows }: { rows: RankingRow[] }) {
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       {rows.map((row, i) => {
-        const kda = row.kda.toFixed(2)
+        const kda = typeof row.kda === 'number' ? row.kda.toFixed(2) : '—'
         const pos = i + 1
         const isFirst = pos === 1
 
@@ -114,7 +114,9 @@ function TablaHistorico({ rows }: { rows: RankingViewRow[] }) {
     )
   }
 
-  const sorted = [...rows].sort((a, b) => b.victorias - a.victorias || b.kda - a.kda)
+  const sorted = [...rows].sort((a, b) =>
+    b.victorias - a.victorias || (b.kda ?? 0) - (a.kda ?? 0)
+  )
 
   return (
     <div className="bg-card border border-border rounded-xl overflow-hidden">

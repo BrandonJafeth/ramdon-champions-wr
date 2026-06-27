@@ -106,7 +106,6 @@ Formato exacto:
   const validNames = new Set(availableChampions.map((n) => n.toLowerCase()))
 
   return (parsed as { champion: string; reason: string }[])
-    .slice(0, 3)
     .map((item) => ({ champion: String(item.champion), reason: String(item.reason) }))
     .filter((item) => validNames.has(item.champion.toLowerCase()))
     .slice(0, 3)
