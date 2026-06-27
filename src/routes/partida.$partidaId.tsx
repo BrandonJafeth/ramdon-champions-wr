@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { ArrowLeft, Shuffle, Ban, BarChart2, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Shuffle, Ban, BarChart2, ChevronRight, Sparkles } from 'lucide-react'
 import { sileo } from 'sileo'
 import { Button } from '@/components/ui/button'
 import { LoadingState } from '@/components/LoadingState'
@@ -9,6 +9,8 @@ import { useJugadores } from '@/hooks/useJugadores'
 import { useAsignacionesPartida, useAsignarCampeon, useRerollBaneo } from '@/hooks/usePartida'
 import { useAsignacionesRealtime } from '@/hooks/useRealtime'
 import { useWildRiftChampions } from '@/lib/champions'
+import { sugerirBaneos } from '@/api/grok'
+import type { BanSuggestion } from '@/api/grok'
 import type { AsignacionConJugador, Jugador } from '@/types/wildrift'
 
 
@@ -35,6 +37,8 @@ interface JugadorCardProps {
   isPending: boolean
   pendingAny: boolean
   error?: string
+  banSuggestions?: BanSuggestion[]
+  banSuggestionsLoading?: boolean
   onAsignar: (jugadorId: string, rol?: string) => void
   onReroll: (asignacionId: string, jugadorId: string) => void
 }
@@ -47,6 +51,8 @@ function JugadorCard({
   isPending,
   pendingAny,
   error,
+  banSuggestions,
+  banSuggestionsLoading,
   onAsignar,
   onReroll,
 }: JugadorCardProps) {
@@ -94,6 +100,30 @@ function JugadorCard({
             {isPending ? '...' : 'Banear'}
           </Button>
         </div>
+
+        {/* AI ban suggestions */}
+        {banSuggestionsLoading && (
+          <div className="px-4 pb-3 flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3 text-violet-400 animate-pulse shrink-0" />
+            <span className="text-xs text-muted-foreground">Calculando baneos...</span>
+          </div>
+        )}
+        {banSuggestions && banSuggestions.length > 0 && (
+          <div className="px-4 pb-3 border-t border-border pt-2.5">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="h-3 w-3 text-violet-400 shrink-0" />
+              <span className="text-xs font-medium text-violet-400">Baneos sugeridos</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              {banSuggestions.map((s) => (
+                <div key={s.champion} className="flex items-start gap-2">
+                  <span className="text-xs font-semibold text-foreground shrink-0 w-24 truncate">{s.champion}</span>
+                  <span className="text-xs text-muted-foreground leading-tight">{s.reason}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && <p className="px-4 pb-3 text-xs text-destructive">{error}</p>}
       </div>
@@ -187,6 +217,8 @@ function PartidaScreen() {
 
   const [pendingJugadorId, setPendingJugadorId] = useState<string | null>(null)
   const [errors, setErrors] = useState<Map<string, string>>(new Map())
+  const [banSuggestions, setBanSuggestions] = useState<Map<string, BanSuggestion[]>>(new Map())
+  const [banLoadingIds, setBanLoadingIds] = useState<Set<string>>(new Set())
   const pendingAny = pendingJugadorId !== null
 
   function clearError(jugadorId: string) {
@@ -195,6 +227,23 @@ function PartidaScreen() {
       next.delete(jugadorId)
       return next
     })
+  }
+
+  async function fetchBanSuggestions(jugadorId: string, championName: string, role: string) {
+    if (!import.meta.env.VITE_GROQ_API_KEY) return
+    setBanLoadingIds((prev) => new Set(prev).add(jugadorId))
+    try {
+      const teamComposition = asignaciones
+        .filter((a) => a.jugador_id !== jugadorId)
+        .map((a) => ({ champion: a.champion_name, role: a.rol_pedido ?? '' }))
+      const availableChampions = champions.map((c) => c.name)
+      const suggestions = await sugerirBaneos({ championName, role, teamComposition, availableChampions })
+      setBanSuggestions((prev) => new Map(prev).set(jugadorId, suggestions))
+    } catch {
+      // Silently ignore — not critical
+    } finally {
+      setBanLoadingIds((prev) => { const next = new Set(prev); next.delete(jugadorId); return next })
+    }
   }
 
   function handleAsignar(jugadorId: string, rol?: string) {
@@ -206,9 +255,10 @@ function PartidaScreen() {
     asignarMutation.mutate(
       { jugadorId, rol },
       {
-        onSuccess: () => {
+        onSuccess: (asignacion) => {
           setPendingJugadorId(null)
           sileo.success({ title: 'Campeón asignado' })
+          void fetchBanSuggestions(jugadorId, asignacion.champion_name, asignacion.rol_pedido ?? '')
         },
         onError: (err) => {
           setPendingJugadorId(null)
@@ -225,9 +275,11 @@ function PartidaScreen() {
     rerollMutation.mutate(
       { asignacionAnteriorId: asignacionId },
       {
-        onSuccess: () => {
+        onSuccess: (asignacion) => {
           setPendingJugadorId(null)
           sileo.success({ title: 'Baneado — nuevo campeón asignado' })
+          setBanSuggestions((prev) => { const next = new Map(prev); next.delete(jugadorId); return next })
+          void fetchBanSuggestions(jugadorId, asignacion.champion_name, asignacion.rol_pedido ?? '')
         },
         onError: (err) => {
           setPendingJugadorId(null)
@@ -296,6 +348,8 @@ function PartidaScreen() {
                   isPending={pendingJugadorId === jugador.id}
                   pendingAny={pendingAny}
                   error={errors.get(jugador.id)}
+                  banSuggestions={banSuggestions.get(jugador.id)}
+                  banSuggestionsLoading={banLoadingIds.has(jugador.id)}
                   onAsignar={handleAsignar}
                   onReroll={handleReroll}
                 />
